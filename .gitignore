@@ -11,9 +11,6 @@ frontend/dist/
 # Training runs (the demo checkpoint ppo_pursuer_latest.zip stays tracked)
 backend/checkpoints/*/
 
-# Tooling
-.claude/
-
 # OS
 .DS_Store
 Thumbs.db
