@@ -1,0 +1,20 @@
+# Python
+backend/.venv/
+__pycache__/
+*.pyc
+backend/logs/
+
+# Node
+frontend/node_modules/
+frontend/dist/
+
+# Training runs (the demo checkpoint ppo_pursuer_latest.zip stays tracked)
+backend/checkpoints/*/
+
+# Tooling
+.claude/
+
+# OS
+.DS_Store
+Thumbs.db
+frontend/tsconfig.tsbuildinfo
