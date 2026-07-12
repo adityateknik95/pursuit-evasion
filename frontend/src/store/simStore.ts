@@ -71,6 +71,7 @@ export interface SimSnapshot {
   captureRadius: number
   distanceHistory: number[]
   cameraMode: CameraMode
+  tacticalMode: boolean
   placementTarget: PlacementTarget
   pendingPursuerPos: Vec3 | null
   pendingEvaderPos: Vec3 | null
@@ -96,6 +97,7 @@ let snapshot: SimSnapshot = {
   captureRadius: 0.9,
   distanceHistory: [],
   cameraMode: 'free',
+  tacticalMode: true,
   placementTarget: null,
   pendingPursuerPos: null,
   pendingEvaderPos: null,

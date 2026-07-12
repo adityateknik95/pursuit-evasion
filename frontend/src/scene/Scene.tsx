@@ -28,6 +28,7 @@ import { SkyDome } from './SkyDome'
 import { DustMotes } from './DustMotes'
 import { Shockwave } from './Shockwave'
 import { TensionLights } from './TensionLights'
+import { TacticalOverlay } from './TacticalOverlay'
 
 const PURSUER_COLOR = '#ff4422'
 const PURSUER_GLOW = '#ff7744'
@@ -81,7 +82,7 @@ function ReflectiveFloor({ half }: { half: number }) {
 }
 
 export function Scene() {
-  const { arenaSize } = useSim()
+  const { arenaSize, tacticalMode } = useSim()
   const half = arenaSize / 2
 
   return (
@@ -113,6 +114,7 @@ export function Scene() {
       <Trail role="evader" color={EVADER_GLOW} />
       <CaptureBurst />
       <Shockwave />
+      {tacticalMode && <TacticalOverlay />}
       <CameraRig />
 
       <EffectComposer>

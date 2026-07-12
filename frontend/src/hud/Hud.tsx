@@ -173,6 +173,12 @@ export function Hud() {
           >
             ⌖ PLACE
           </button>
+          <button
+            className={`btn ${sim.tacticalMode ? 'btn-active' : ''}`}
+            onClick={() => setSim({ tacticalMode: !getSim().tacticalMode })}
+          >
+            ◎ TACT
+          </button>
         </div>
 
         <div className="control-group slider-group">

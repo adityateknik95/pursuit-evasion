@@ -540,3 +540,18 @@ input[type='range']::-moz-range-thumb {
     gap: 8px 10px;
   }
 }
+
+/* ---- tactical overlay ---- */
+
+.tact-label {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  color: #eafcf6;
+  text-shadow: 0 0 8px rgba(52, 211, 153, 0.8);
+  background: rgba(8, 12, 22, 0.5);
+  border: 1px solid rgba(120, 200, 170, 0.35);
+  border-radius: 5px;
+  padding: 2px 7px;
+  white-space: nowrap;
+}

@@ -9,9 +9,11 @@ different starting states.
 The pursuer (red) is trained with PPO; the evader (cyan) is a scripted
 potential-field controller that flees intelligently and avoids walls. The
 evader has a higher top speed; the pursuer is more agile — so the pursuer has
-to *learn* to predict and cut corners. After a short training run, the PPO
-pursuer captures ~8/10 episodes where a naive pure-pursuit heuristic manages
-only ~2/10 — and you can toggle between the two live to see the difference.
+to *learn* to predict and cut corners. After 2M training steps the PPO pursuer
+captures **20/20** held-out episodes (mean 4.4s) where a naive pure-pursuit
+heuristic manages 3/20 (mean 26.4s) — and you can toggle between the two live,
+with a tactical overlay drawing the interception geometry so the difference in
+strategy is visible on screen.
 
 ## Architecture
 
@@ -90,6 +92,11 @@ Open http://localhost:5173 — you should immediately see the pursuit running.
   pure-pursuit heuristic mid-run and compare capture rates.
 - **⌖ PLACE**: click the arena floor twice — first click sets the pursuer's
   start, second sets the evader's — then hit RESET to run your scenario.
+- **◎ TACT**: tactical overlay — dashed ghost trajectories for both agents,
+  an amber interception line to the predicted meet point, and a green→red
+  engagement line with a live gap readout. Flip PPO↔NAIVE with this on: the
+  naive pursuer flies at the target, the learned one flies at where the
+  target will be.
 - The HUD shows live distance, episode timer, step count, captures, reward,
   connection status, and a distance-over-time sparkline (the dashed red line
   is the capture radius).
