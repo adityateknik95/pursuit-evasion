@@ -7,7 +7,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { getSim, setSim, useSim } from '../store/simStore'
 import { sendControl } from '../ws/wsClient'
-import type { CameraMode } from '../types/messages'
+import type { CameraMode, EvaderMode } from '../types/messages'
 import { Sparkline } from './Sparkline'
 
 /** white flash + slammed "CAPTURE" title card, fired when captureCount ticks up */
@@ -72,6 +72,10 @@ export function Hud() {
 
   const handlePolicy = useCallback((mode: 'ppo' | 'naive') => {
     sendControl({ type: 'set_policy_mode', value: mode })
+  }, [])
+
+  const handleEvader = useCallback((mode: EvaderMode) => {
+    sendControl({ type: 'set_evader_mode', value: mode })
   }, [])
 
   const handlePlace = useCallback(() => {
@@ -209,6 +213,25 @@ export function Hud() {
               onClick={() => handlePolicy('naive')}
             >
               NAIVE
+            </button>
+          </div>
+        </div>
+
+        <div className="control-group">
+          <span className="stat-label">EVADER</span>
+          <div className="segmented">
+            <button
+              className={sim.evaderMode === 'scripted' ? 'seg-active' : ''}
+              onClick={() => handleEvader('scripted')}
+            >
+              SCRIPTED
+            </button>
+            <button
+              className={sim.evaderMode === 'ppo' ? 'seg-active' : ''}
+              onClick={() => handleEvader('ppo')}
+              disabled={!sim.evaderModelLoaded}
+            >
+              PPO
             </button>
           </div>
         </div>

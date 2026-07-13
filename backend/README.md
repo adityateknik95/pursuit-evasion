@@ -22,6 +22,9 @@ python train.py --timesteps 2000000
 
 # Quick demo checkpoint (a few minutes on CPU)
 python train.py --timesteps 150000 --run-name demo
+
+# Self-play: train the evader against the frozen pursuer checkpoint
+python train.py --agent evader --timesteps 1500000 --run-name evader_v1
 ```
 
 - Checkpoints are written to `checkpoints/<run-name>/`, and the final model is
@@ -80,6 +83,7 @@ Client → server:
 | Pause / resume | `{"type": "pause"}` / `{"type": "resume"}` |
 | Sim speed | `{"type": "set_speed", "value": 0.25–4.0}` |
 | Policy mode | `{"type": "set_policy_mode", "value": "ppo" \| "naive"}` |
+| Evader mode | `{"type": "set_evader_mode", "value": "scripted" \| "ppo"}` |
 
 ## Environment
 

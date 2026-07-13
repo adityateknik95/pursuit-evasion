@@ -21,6 +21,7 @@ export interface FrameMessage {
   paused: boolean
   speed: number
   policy_mode: PolicyMode
+  evader_mode: EvaderMode
   arena_size: number
   capture_radius: number
 }
@@ -30,11 +31,13 @@ export interface StatusMessage {
   paused: boolean
   speed: number
   policy_mode: PolicyMode
+  evader_mode: EvaderMode
   episode: number
   capture_count: number
   arena_size: number
   capture_radius: number
   model_loaded: boolean
+  evader_model_loaded: boolean
 }
 
 export interface EpisodeEndMessage {
@@ -54,12 +57,16 @@ export type ServerMessage = FrameMessage | StatusMessage | EpisodeEndMessage | E
 
 export type PolicyMode = 'ppo' | 'naive'
 
+/** who drives the evader: the scripted potential-field controller or a learned policy */
+export type EvaderMode = 'scripted' | 'ppo'
+
 export type ClientMessage =
   | { type: 'reset'; pursuer_pos?: Vec3; evader_pos?: Vec3 }
   | { type: 'pause' }
   | { type: 'resume' }
   | { type: 'set_speed'; value: number }
   | { type: 'set_policy_mode'; value: PolicyMode }
+  | { type: 'set_evader_mode'; value: EvaderMode }
 
 export type ConnectionStatus = 'connecting' | 'connected' | 'disconnected'
 

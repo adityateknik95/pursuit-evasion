@@ -122,11 +122,20 @@ class PursuitEvasionEnv(gym.Env):
 
         return self._get_obs(), self._get_info(captured=False)
 
-    def step(self, action: np.ndarray):
+    def step(self, action: np.ndarray, evader_action: np.ndarray | None = None):
+        """Advance one tick. `action` is the pursuer's normalized accel command.
+
+        `evader_action` (normalized [-1,1]^3) overrides the scripted evader —
+        used for self-play training and for running a learned evader live.
+        """
         action = np.clip(np.asarray(action, dtype=np.float32), -1.0, 1.0)
         pursuer_accel = action * self.cfg.pursuer_max_accel
 
-        evader_accel = self.scripted_evader_action(self.evader_pos, self.evader_vel, self.pursuer_pos)
+        if evader_action is None:
+            evader_accel = self.scripted_evader_action(self.evader_pos, self.evader_vel, self.pursuer_pos)
+        else:
+            evader_action = np.clip(np.asarray(evader_action, dtype=np.float32), -1.0, 1.0)
+            evader_accel = evader_action * self.cfg.evader_max_accel
 
         prev_dist = float(np.linalg.norm(self.evader_pos - self.pursuer_pos))
 
@@ -162,7 +171,11 @@ class PursuitEvasionEnv(gym.Env):
         terminated = bool(captured)
         truncated = self.step_count >= self.cfg.max_steps
 
-        return self._get_obs(), pursuer_reward, terminated, truncated, self._get_info(captured=captured)
+        info = self._get_info(captured=captured)
+        info["pursuer_step_reward"] = pursuer_reward
+        info["evader_step_reward"] = evader_reward
+
+        return self._get_obs(), pursuer_reward, terminated, truncated, info
 
     # ------------------------------------------------------------------ #
     # Dynamics helpers

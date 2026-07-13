@@ -90,6 +90,10 @@ Open http://localhost:5173 — you should immediately see the pursuit running.
 - **⏸ PAUSE / ▶ RESUME**, **↺ RESET**, and a **speed slider** (0.25×–4×).
 - **POLICY toggle**: flip between the trained PPO pursuer and the naive
   pure-pursuit heuristic mid-run and compare capture rates.
+- **EVADER toggle**: swap the scripted potential-field evader for a PPO evader
+  trained via self-play against the frozen pursuer. The arms race is stark:
+  the 2M-step pursuer captures the scripted evader 20/20 (mean 4.1s) but the
+  learned evader escapes it 19/20 (mean survival 28.7s of the 30s cap).
 - **⌖ PLACE**: click the arena floor twice — first click sets the pursuer's
   start, second sets the evader's — then hit RESET to run your scenario.
 - **◎ TACT**: tactical overlay — dashed ghost trajectories for both agents,

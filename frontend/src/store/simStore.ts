@@ -12,6 +12,7 @@ import { useSyncExternalStore } from 'react'
 import type {
   CameraMode,
   ConnectionStatus,
+  EvaderMode,
   FrameMessage,
   PlacementTarget,
   PolicyMode,
@@ -66,7 +67,9 @@ export interface SimSnapshot {
   paused: boolean
   speed: number
   policyMode: PolicyMode
+  evaderMode: EvaderMode
   modelLoaded: boolean
+  evaderModelLoaded: boolean
   arenaSize: number
   captureRadius: number
   distanceHistory: number[]
@@ -92,7 +95,9 @@ let snapshot: SimSnapshot = {
   paused: false,
   speed: 1,
   policyMode: 'ppo',
+  evaderMode: 'scripted',
   modelLoaded: false,
+  evaderModelLoaded: false,
   arenaSize: 20,
   captureRadius: 0.9,
   distanceHistory: [],

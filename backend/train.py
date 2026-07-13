@@ -1,8 +1,13 @@
-"""Train a PPO pursuer against the scripted potential-field evader.
+"""Train a PPO agent on the pursuit-evasion arena.
+
+Default trains the *pursuer* against the scripted potential-field evader.
+With --agent evader it instead trains the *evader* against a frozen PPO
+pursuer checkpoint (one alternation of self-play).
 
 Usage:
     python train.py --timesteps 2_000_000
     python train.py --timesteps 20_000 --run-name smoke_test
+    python train.py --agent evader --pursuer-checkpoint checkpoints/ppo_pursuer_latest.zip
 
 Produces:
     checkpoints/<run-name>/ppo_pursuer_final.zip   (final policy)
@@ -21,6 +26,7 @@ from stable_baselines3.common.callbacks import CheckpointCallback
 from stable_baselines3.common.env_util import make_vec_env
 from stable_baselines3.common.monitor import Monitor
 
+from pursuit_evasion.env.evader_env import EvaderSelfPlayEnv
 from pursuit_evasion.env.pursuit_evasion_env import EnvConfig, PursuitEvasionEnv
 
 BACKEND_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -28,9 +34,12 @@ CHECKPOINT_DIR = os.path.join(BACKEND_DIR, "checkpoints")
 LOG_DIR = os.path.join(BACKEND_DIR, "logs")
 
 
-def make_env():
+def make_env(agent: str, pursuer_checkpoint: str | None):
     def _init():
-        env = PursuitEvasionEnv(EnvConfig())
+        if agent == "evader":
+            env = EvaderSelfPlayEnv(pursuer_checkpoint, EnvConfig())
+        else:
+            env = PursuitEvasionEnv(EnvConfig())
         return Monitor(env)
 
     return _init
@@ -44,6 +53,11 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--seed", type=int, default=42)
     parser.add_argument("--checkpoint-every", type=int, default=50_000, help="timesteps between checkpoints")
     parser.add_argument("--resume-from", type=str, default=None, help="path to a .zip to resume training from")
+    parser.add_argument("--agent", choices=["pursuer", "evader"], default="pursuer",
+                        help="which side to train; evader trains against a frozen pursuer")
+    parser.add_argument("--pursuer-checkpoint", type=str,
+                        default=os.path.join(CHECKPOINT_DIR, "ppo_pursuer_latest.zip"),
+                        help="frozen pursuer policy used when --agent evader")
     return parser.parse_args()
 
 
@@ -55,7 +69,7 @@ def main() -> None:
     os.makedirs(run_ckpt_dir, exist_ok=True)
     os.makedirs(run_log_dir, exist_ok=True)
 
-    vec_env = make_vec_env(make_env(), n_envs=args.n_envs, seed=args.seed)
+    vec_env = make_vec_env(make_env(args.agent, args.pursuer_checkpoint), n_envs=args.n_envs, seed=args.seed)
 
     if args.resume_from:
         model = PPO.load(args.resume_from, env=vec_env, tensorboard_log=run_log_dir)
@@ -83,7 +97,7 @@ def main() -> None:
     checkpoint_callback = CheckpointCallback(
         save_freq=max(args.checkpoint_every // args.n_envs, 1),
         save_path=run_ckpt_dir,
-        name_prefix="ppo_pursuer",
+        name_prefix=f"ppo_{args.agent}",
     )
 
     start = time.time()
@@ -97,13 +111,13 @@ def main() -> None:
     elapsed = time.time() - start
     print(f"Training finished in {elapsed:.1f}s ({args.timesteps} timesteps)")
 
-    final_path = os.path.join(run_ckpt_dir, "ppo_pursuer_final")
+    final_path = os.path.join(run_ckpt_dir, f"ppo_{args.agent}_final")
     model.save(final_path)
     print(f"Saved final model to {final_path}.zip")
 
     # Also drop a copy at the top level of checkpoints/ so the server's default
     # path always finds the most recently completed run.
-    latest_path = os.path.join(CHECKPOINT_DIR, "ppo_pursuer_latest")
+    latest_path = os.path.join(CHECKPOINT_DIR, f"ppo_{args.agent}_latest")
     model.save(latest_path)
     print(f"Saved latest-alias model to {latest_path}.zip")
 

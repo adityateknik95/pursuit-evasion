@@ -10,6 +10,7 @@ Incoming client messages (JSON):
     {"type": "resume"}
     {"type": "set_speed", "value": 0.25..4.0}
     {"type": "set_policy_mode", "value": "ppo" | "naive"}
+    {"type": "set_evader_mode", "value": "scripted" | "ppo"}
 
 Usage:
     uvicorn server:app --host 0.0.0.0 --port 8000
@@ -28,6 +29,7 @@ import numpy as np
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 
+from pursuit_evasion.env.evader_env import evader_obs
 from pursuit_evasion.env.pursuit_evasion_env import EnvConfig, PursuitEvasionEnv
 from pursuit_evasion.policies import naive_pursuit_action
 
@@ -37,6 +39,8 @@ logger = logging.getLogger("pursuit-server")
 BACKEND_DIR = os.path.dirname(os.path.abspath(__file__))
 DEFAULT_CHECKPOINT = os.path.join(BACKEND_DIR, "checkpoints", "ppo_pursuer_latest.zip")
 CHECKPOINT_PATH = os.environ.get("PURSUIT_CHECKPOINT", DEFAULT_CHECKPOINT)
+DEFAULT_EVADER_CHECKPOINT = os.path.join(BACKEND_DIR, "checkpoints", "ppo_evader_latest.zip")
+EVADER_CHECKPOINT_PATH = os.environ.get("EVADER_CHECKPOINT", DEFAULT_EVADER_CHECKPOINT)
 
 BASE_HZ = 30.0
 CAPTURE_PAUSE_S = 1.2  # linger after a capture before auto-reset
@@ -48,11 +52,13 @@ class SimulationManager:
     def __init__(self) -> None:
         self.env = PursuitEvasionEnv(EnvConfig())
         self.model = None  # loaded lazily in lifespan (torch import is slow)
+        self.evader_model = None
         self.obs: np.ndarray | None = None
 
         self.paused = False
         self.speed = 1.0
         self.policy_mode = "ppo"
+        self.evader_mode = "scripted"
         self.episode = 0
         self.capture_count = 0
         self.pending_reset_options: dict | None = None
@@ -76,6 +82,16 @@ class SimulationManager:
             )
             self.policy_mode = "naive"
 
+        if os.path.exists(EVADER_CHECKPOINT_PATH):
+            self.evader_model = PPO.load(EVADER_CHECKPOINT_PATH, device="cpu")
+            logger.info("Loaded evader checkpoint: %s", EVADER_CHECKPOINT_PATH)
+        else:
+            logger.info(
+                "No evader checkpoint at %s — evader runs scripted only. "
+                "Train one with: python train.py --agent evader",
+                EVADER_CHECKPOINT_PATH,
+            )
+
     def reset_env(self, options: dict | None = None) -> None:
         self.obs, _ = self.env.reset(options=options)
         self.episode += 1
@@ -91,6 +107,13 @@ class SimulationManager:
             self.env.evader_vel,
             self.env.cfg,
         )
+
+    def compute_evader_action(self) -> np.ndarray | None:
+        """None → env falls back to the scripted potential-field evader."""
+        if self.evader_mode == "ppo" and self.evader_model is not None:
+            action, _ = self.evader_model.predict(evader_obs(self.env), deterministic=True)
+            return action
+        return None
 
     def make_frame(self, captured: bool, terminated: bool, truncated: bool) -> dict:
         env = self.env
@@ -116,6 +139,7 @@ class SimulationManager:
             "paused": self.paused,
             "speed": self.speed,
             "policy_mode": self.policy_mode,
+            "evader_mode": self.evader_mode,
             "arena_size": env.cfg.arena_size,
             "capture_radius": env.cfg.capture_radius,
         }
@@ -126,11 +150,13 @@ class SimulationManager:
             "paused": self.paused,
             "speed": self.speed,
             "policy_mode": self.policy_mode,
+            "evader_mode": self.evader_mode,
             "episode": self.episode,
             "capture_count": self.capture_count,
             "arena_size": self.env.cfg.arena_size,
             "capture_radius": self.env.cfg.capture_radius,
             "model_loaded": self.model is not None,
+            "evader_model_loaded": self.evader_model is not None,
         }
 
     # ---------------------------------------------------------------- #
@@ -183,6 +209,15 @@ class SimulationManager:
                         )
                     else:
                         self.policy_mode = value
+            elif msg_type == "set_evader_mode":
+                value = msg.get("value")
+                if value in ("scripted", "ppo"):
+                    if value == "ppo" and self.evader_model is None:
+                        await ws.send_text(
+                            json.dumps({"type": "error", "message": "no evader checkpoint loaded"})
+                        )
+                    else:
+                        self.evader_mode = value
             else:
                 await ws.send_text(
                     json.dumps({"type": "error", "message": f"unknown message type: {msg_type}"})
@@ -208,7 +243,10 @@ class SimulationManager:
 
                 if not self.paused and self.clients:
                     action = self.compute_action()
-                    self.obs, _reward, terminated, truncated, info = self.env.step(action)
+                    evader_action = self.compute_evader_action()
+                    self.obs, _reward, terminated, truncated, info = self.env.step(
+                        action, evader_action=evader_action
+                    )
                     captured = bool(info["captured"])
                     if captured:
                         self.capture_count += 1

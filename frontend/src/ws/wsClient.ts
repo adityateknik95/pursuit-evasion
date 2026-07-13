@@ -46,11 +46,13 @@ function handleMessage(raw: string) {
         paused: msg.paused,
         speed: msg.speed,
         policyMode: msg.policy_mode,
+        evaderMode: msg.evader_mode,
         episode: msg.episode,
         captureCount: msg.capture_count,
         arenaSize: msg.arena_size,
         captureRadius: msg.capture_radius,
         modelLoaded: msg.model_loaded,
+        evaderModelLoaded: msg.evader_model_loaded,
       })
       break
     case 'episode_end':
