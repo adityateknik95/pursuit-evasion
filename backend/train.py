@@ -26,7 +26,7 @@ from stable_baselines3.common.callbacks import CheckpointCallback
 from stable_baselines3.common.env_util import make_vec_env
 from stable_baselines3.common.monitor import Monitor
 
-from pursuit_evasion.env.evader_env import EvaderSelfPlayEnv
+from pursuit_evasion.env.evader_env import EvaderSelfPlayEnv, PursuerSelfPlayEnv
 from pursuit_evasion.env.pursuit_evasion_env import EnvConfig, PursuitEvasionEnv
 
 BACKEND_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -34,10 +34,13 @@ CHECKPOINT_DIR = os.path.join(BACKEND_DIR, "checkpoints")
 LOG_DIR = os.path.join(BACKEND_DIR, "logs")
 
 
-def make_env(agent: str, pursuer_checkpoint: str | None):
+def make_env(agent: str, pursuer_checkpoint: str | None, evader_checkpoint: str | None):
     def _init():
         if agent == "evader":
             env = EvaderSelfPlayEnv(pursuer_checkpoint, EnvConfig())
+        elif evader_checkpoint:
+            # round 2+ of alternating self-play: pursuer vs a frozen learned evader
+            env = PursuerSelfPlayEnv(evader_checkpoint, EnvConfig())
         else:
             env = PursuitEvasionEnv(EnvConfig())
         return Monitor(env)
@@ -58,6 +61,8 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--pursuer-checkpoint", type=str,
                         default=os.path.join(CHECKPOINT_DIR, "ppo_pursuer_latest.zip"),
                         help="frozen pursuer policy used when --agent evader")
+    parser.add_argument("--evader-checkpoint", type=str, default=None,
+                        help="frozen evader policy; when training the pursuer, replaces the scripted evader")
     return parser.parse_args()
 
 
@@ -69,7 +74,11 @@ def main() -> None:
     os.makedirs(run_ckpt_dir, exist_ok=True)
     os.makedirs(run_log_dir, exist_ok=True)
 
-    vec_env = make_vec_env(make_env(args.agent, args.pursuer_checkpoint), n_envs=args.n_envs, seed=args.seed)
+    vec_env = make_vec_env(
+        make_env(args.agent, args.pursuer_checkpoint, args.evader_checkpoint),
+        n_envs=args.n_envs,
+        seed=args.seed,
+    )
 
     if args.resume_from:
         model = PPO.load(args.resume_from, env=vec_env, tensorboard_log=run_log_dir)

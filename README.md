@@ -91,9 +91,33 @@ Open http://localhost:5173 — you should immediately see the pursuit running.
 - **POLICY toggle**: flip between the trained PPO pursuer and the naive
   pure-pursuit heuristic mid-run and compare capture rates.
 - **EVADER toggle**: swap the scripted potential-field evader for a PPO evader
-  trained via self-play against the frozen pursuer. The arms race is stark:
-  the 2M-step pursuer captures the scripted evader 20/20 (mean 4.1s) but the
-  learned evader escapes it 19/20 (mean survival 28.7s of the 30s cap).
+  trained via self-play against the frozen pursuer.
+
+## The arms race (alternating self-play)
+
+Each generation trains against the previous one, frozen. 20 held-out episodes
+per matchup:
+
+| Matchup | Captures | Mean episode |
+| --- | --- | --- |
+| naive heuristic vs scripted evader | 3/20 | 26.4s |
+| pursuer v1 (2M) vs scripted evader | **20/20** | 4.1s |
+| pursuer v1 vs **evader v1** (1.5M self-play) | 2/20 | 27.5s |
+| **pursuer v2** (2M vs evader v1) vs evader v1 | **20/20** | 6.1s |
+| pursuer v2 vs scripted evader | 6/20 | 25.5s |
+
+Generation 2 exhibits **catastrophic forgetting**: pursuer v2 completely
+counters the learned evader but *forgets* how to hunt the scripted one — the
+classic reason production self-play systems (AlphaStar's league, OpenAI Five)
+train against opponent pools rather than only the latest adversary.
+
+The server defaults to pursuer v1 (`checkpoints/ppo_pursuer_latest.zip`).
+To run v2 instead:
+
+```powershell
+$env:PURSUIT_CHECKPOINT = "checkpoints\ppo_pursuer_v2.zip"
+uvicorn server:app --port 8000
+```
 - **⌖ PLACE**: click the arena floor twice — first click sets the pursuer's
   start, second sets the evader's — then hit RESET to run your scenario.
 - **◎ TACT**: tactical overlay — dashed ghost trajectories for both agents,
