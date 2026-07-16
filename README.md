@@ -105,17 +105,25 @@ per matchup:
 | pursuer v1 vs **evader v1** (1.5M self-play) | 2/20 | 27.5s |
 | **pursuer v2** (2M vs evader v1) vs evader v1 | **20/20** | 6.1s |
 | pursuer v2 vs scripted evader | 6/20 | 25.5s |
+| **pursuer v3** (2M vs 50/50 opponent pool) vs scripted | **20/20** | 4.5s |
+| pursuer v3 vs evader v1 | **20/20** | 5.9s |
 
-Generation 2 exhibits **catastrophic forgetting**: pursuer v2 completely
-counters the learned evader but *forgets* how to hunt the scripted one — the
-classic reason production self-play systems (AlphaStar's league, OpenAI Five)
-train against opponent pools rather than only the latest adversary.
+The arc is the classic self-play story in miniature:
 
-The server defaults to pursuer v1 (`checkpoints/ppo_pursuer_latest.zip`).
-To run v2 instead:
+1. **v1 (specialist)** masters the scripted evader, but the self-play evader
+   then exploits it (2/20).
+2. **v2 (counter-specialist)** solves the learned evader — and exhibits
+   **catastrophic forgetting**, dropping to 6/20 against the *scripted* one.
+3. **v3 (generalist)** retrains against a 50/50 **opponent pool**
+   (`--scripted-mix 0.5`) and holds 20/20 against both — the same reason
+   production systems (AlphaStar's league, OpenAI Five) train against pools
+   rather than only the latest adversary.
+
+The server defaults to pursuer v3 (`checkpoints/ppo_pursuer_latest.zip`);
+v1 and v2 ship alongside for comparison:
 
 ```powershell
-$env:PURSUIT_CHECKPOINT = "checkpoints\ppo_pursuer_v2.zip"
+$env:PURSUIT_CHECKPOINT = "checkpoints\ppo_pursuer_v1.zip"   # or _v2
 uvicorn server:app --port 8000
 ```
 - **⌖ PLACE**: click the arena floor twice — first click sets the pursuer's

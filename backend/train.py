@@ -34,13 +34,19 @@ CHECKPOINT_DIR = os.path.join(BACKEND_DIR, "checkpoints")
 LOG_DIR = os.path.join(BACKEND_DIR, "logs")
 
 
-def make_env(agent: str, pursuer_checkpoint: str | None, evader_checkpoint: str | None):
+def make_env(
+    agent: str,
+    pursuer_checkpoint: str | None,
+    evader_checkpoint: str | None,
+    scripted_mix: float,
+):
     def _init():
         if agent == "evader":
             env = EvaderSelfPlayEnv(pursuer_checkpoint, EnvConfig())
         elif evader_checkpoint:
-            # round 2+ of alternating self-play: pursuer vs a frozen learned evader
-            env = PursuerSelfPlayEnv(evader_checkpoint, EnvConfig())
+            # round 2+ of alternating self-play: pursuer vs a frozen learned
+            # evader, optionally mixed with scripted episodes (opponent pool)
+            env = PursuerSelfPlayEnv(evader_checkpoint, EnvConfig(), scripted_prob=scripted_mix)
         else:
             env = PursuitEvasionEnv(EnvConfig())
         return Monitor(env)
@@ -63,6 +69,8 @@ def parse_args() -> argparse.Namespace:
                         help="frozen pursuer policy used when --agent evader")
     parser.add_argument("--evader-checkpoint", type=str, default=None,
                         help="frozen evader policy; when training the pursuer, replaces the scripted evader")
+    parser.add_argument("--scripted-mix", type=float, default=0.0,
+                        help="probability an episode uses the scripted evader instead of the learned one")
     return parser.parse_args()
 
 
@@ -75,7 +83,7 @@ def main() -> None:
     os.makedirs(run_log_dir, exist_ok=True)
 
     vec_env = make_vec_env(
-        make_env(args.agent, args.pursuer_checkpoint, args.evader_checkpoint),
+        make_env(args.agent, args.pursuer_checkpoint, args.evader_checkpoint, args.scripted_mix),
         n_envs=args.n_envs,
         seed=args.seed,
     )

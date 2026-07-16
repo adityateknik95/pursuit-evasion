@@ -38,24 +38,39 @@ def evader_obs(env: PursuitEvasionEnv) -> np.ndarray:
 
 class PursuerSelfPlayEnv(gym.Env):
     """Pursuer (agent) vs. a frozen PPO evader — round 2+ of alternating
-    self-play. Observation/reward are the standard pursuer-centric ones."""
+    self-play. Observation/reward are the standard pursuer-centric ones.
+
+    `scripted_prob` mixes the scripted evader back into the opponent pool:
+    each episode draws the scripted controller with that probability instead
+    of the learned one, which prevents catastrophic forgetting (the classic
+    league-training trick)."""
 
     metadata = {"render_modes": []}
 
-    def __init__(self, evader_checkpoint: str, config: EnvConfig | None = None):
+    def __init__(
+        self,
+        evader_checkpoint: str,
+        config: EnvConfig | None = None,
+        scripted_prob: float = 0.0,
+    ):
         super().__init__()
         from stable_baselines3 import PPO  # deferred: heavy import
 
         self.inner = PursuitEvasionEnv(config)
         self.evader_model = PPO.load(evader_checkpoint, device="cpu")
+        self.scripted_prob = float(scripted_prob)
+        self._episode_scripted = False
         self.action_space = self.inner.action_space
         self.observation_space = self.inner.observation_space
 
     def reset(self, *, seed: int | None = None, options: dict | None = None):
         super().reset(seed=seed)
+        self._episode_scripted = self.np_random.random() < self.scripted_prob
         return self.inner.reset(seed=seed, options=options)
 
     def step(self, action: np.ndarray):
+        if self._episode_scripted:
+            return self.inner.step(action)  # None → scripted evader
         ea, _ = self.evader_model.predict(evader_obs(self.inner), deterministic=True)
         return self.inner.step(action, evader_action=ea)
 
