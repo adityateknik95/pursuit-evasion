@@ -47,6 +47,8 @@ function handleMessage(raw: string) {
         speed: msg.speed,
         policyMode: msg.policy_mode,
         evaderMode: msg.evader_mode,
+        pursuerGen: msg.pursuer_gen,
+        pursuerGens: msg.pursuer_gens,
         episode: msg.episode,
         captureCount: msg.capture_count,
         arenaSize: msg.arena_size,

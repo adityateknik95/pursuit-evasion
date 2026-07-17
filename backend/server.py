@@ -11,6 +11,7 @@ Incoming client messages (JSON):
     {"type": "set_speed", "value": 0.25..4.0}
     {"type": "set_policy_mode", "value": "ppo" | "naive"}
     {"type": "set_evader_mode", "value": "scripted" | "ppo"}
+    {"type": "set_pursuer_gen", "value": "v1" | "v2" | "v3"}
 
 Usage:
     uvicorn server:app --host 0.0.0.0 --port 8000
@@ -37,10 +38,18 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(mess
 logger = logging.getLogger("pursuit-server")
 
 BACKEND_DIR = os.path.dirname(os.path.abspath(__file__))
-DEFAULT_CHECKPOINT = os.path.join(BACKEND_DIR, "checkpoints", "ppo_pursuer_latest.zip")
+CHECKPOINT_DIR = os.path.join(BACKEND_DIR, "checkpoints")
+DEFAULT_CHECKPOINT = os.path.join(CHECKPOINT_DIR, "ppo_pursuer_latest.zip")
 CHECKPOINT_PATH = os.environ.get("PURSUIT_CHECKPOINT", DEFAULT_CHECKPOINT)
-DEFAULT_EVADER_CHECKPOINT = os.path.join(BACKEND_DIR, "checkpoints", "ppo_evader_latest.zip")
+DEFAULT_EVADER_CHECKPOINT = os.path.join(CHECKPOINT_DIR, "ppo_evader_latest.zip")
 EVADER_CHECKPOINT_PATH = os.environ.get("EVADER_CHECKPOINT", DEFAULT_EVADER_CHECKPOINT)
+
+# arms-race generations selectable at runtime; "v3" is the latest-alias default
+PURSUER_GENERATIONS = {
+    "v1": os.path.join(CHECKPOINT_DIR, "ppo_pursuer_v1.zip"),
+    "v2": os.path.join(CHECKPOINT_DIR, "ppo_pursuer_v2.zip"),
+    "v3": CHECKPOINT_PATH,
+}
 
 BASE_HZ = 30.0
 CAPTURE_PAUSE_S = 1.2  # linger after a capture before auto-reset
@@ -51,7 +60,8 @@ class SimulationManager:
 
     def __init__(self) -> None:
         self.env = PursuitEvasionEnv(EnvConfig())
-        self.model = None  # loaded lazily in lifespan (torch import is slow)
+        self.model = None  # active pursuer policy; loaded lazily in lifespan
+        self.models: dict[str, object] = {}  # generation name -> loaded policy
         self.evader_model = None
         self.obs: np.ndarray | None = None
 
@@ -59,6 +69,7 @@ class SimulationManager:
         self.speed = 1.0
         self.policy_mode = "ppo"
         self.evader_mode = "scripted"
+        self.pursuer_gen = "v3"
         self.episode = 0
         self.capture_count = 0
         self.pending_reset_options: dict | None = None
@@ -71,14 +82,20 @@ class SimulationManager:
     def load_model(self) -> None:
         from stable_baselines3 import PPO  # deferred: heavy import
 
-        if os.path.exists(CHECKPOINT_PATH):
-            self.model = PPO.load(CHECKPOINT_PATH, device="cpu")
-            logger.info("Loaded PPO checkpoint: %s", CHECKPOINT_PATH)
+        for gen, path in PURSUER_GENERATIONS.items():
+            if os.path.exists(path):
+                self.models[gen] = PPO.load(path, device="cpu")
+                logger.info("Loaded pursuer %s: %s", gen, path)
+
+        if self.models:
+            # default to the newest available generation
+            self.pursuer_gen = sorted(self.models)[-1]
+            self.model = self.models[self.pursuer_gen]
         else:
             logger.warning(
-                "No checkpoint found at %s — falling back to naive policy. "
-                "Run train.py to create one.",
-                CHECKPOINT_PATH,
+                "No pursuer checkpoint found (looked for %s) — falling back to "
+                "naive policy. Run train.py to create one.",
+                ", ".join(PURSUER_GENERATIONS.values()),
             )
             self.policy_mode = "naive"
 
@@ -151,6 +168,8 @@ class SimulationManager:
             "speed": self.speed,
             "policy_mode": self.policy_mode,
             "evader_mode": self.evader_mode,
+            "pursuer_gen": self.pursuer_gen,
+            "pursuer_gens": sorted(self.models),
             "episode": self.episode,
             "capture_count": self.capture_count,
             "arena_size": self.env.cfg.arena_size,
@@ -209,6 +228,15 @@ class SimulationManager:
                         )
                     else:
                         self.policy_mode = value
+            elif msg_type == "set_pursuer_gen":
+                value = msg.get("value")
+                if value in self.models:
+                    self.pursuer_gen = value
+                    self.model = self.models[value]
+                else:
+                    await ws.send_text(
+                        json.dumps({"type": "error", "message": f"no pursuer generation: {value}"})
+                    )
             elif msg_type == "set_evader_mode":
                 value = msg.get("value")
                 if value in ("scripted", "ppo"):

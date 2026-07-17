@@ -32,6 +32,8 @@ export interface StatusMessage {
   speed: number
   policy_mode: PolicyMode
   evader_mode: EvaderMode
+  pursuer_gen: string
+  pursuer_gens: string[]
   episode: number
   capture_count: number
   arena_size: number
@@ -67,6 +69,7 @@ export type ClientMessage =
   | { type: 'set_speed'; value: number }
   | { type: 'set_policy_mode'; value: PolicyMode }
   | { type: 'set_evader_mode'; value: EvaderMode }
+  | { type: 'set_pursuer_gen'; value: string }
 
 export type ConnectionStatus = 'connecting' | 'connected' | 'disconnected'
 

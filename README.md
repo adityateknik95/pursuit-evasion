@@ -119,13 +119,9 @@ The arc is the classic self-play story in miniature:
    production systems (AlphaStar's league, OpenAI Five) train against pools
    rather than only the latest adversary.
 
-The server defaults to pursuer v3 (`checkpoints/ppo_pursuer_latest.zip`);
-v1 and v2 ship alongside for comparison:
-
-```powershell
-$env:PURSUIT_CHECKPOINT = "checkpoints\ppo_pursuer_v1.zip"   # or _v2
-uvicorn server:app --port 8000
-```
+All three generations load at server start and are switchable live from the
+HUD's **GEN** toggle (V1/V2/V3) — flip to V2 with the scripted evader to watch
+catastrophic forgetting happen in real time, then to V3 to see it fixed.
 - **⌖ PLACE**: click the arena floor twice — first click sets the pursuer's
   start, second sets the evader's — then hit RESET to run your scenario.
 - **◎ TACT**: tactical overlay — dashed ghost trajectories for both agents,

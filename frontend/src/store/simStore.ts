@@ -68,6 +68,8 @@ export interface SimSnapshot {
   speed: number
   policyMode: PolicyMode
   evaderMode: EvaderMode
+  pursuerGen: string
+  pursuerGens: string[]
   modelLoaded: boolean
   evaderModelLoaded: boolean
   arenaSize: number
@@ -96,6 +98,8 @@ let snapshot: SimSnapshot = {
   speed: 1,
   policyMode: 'ppo',
   evaderMode: 'scripted',
+  pursuerGen: 'v3',
+  pursuerGens: [],
   modelLoaded: false,
   evaderModelLoaded: false,
   arenaSize: 20,

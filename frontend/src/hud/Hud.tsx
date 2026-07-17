@@ -78,6 +78,10 @@ export function Hud() {
     sendControl({ type: 'set_evader_mode', value: mode })
   }, [])
 
+  const handleGen = useCallback((gen: string) => {
+    sendControl({ type: 'set_pursuer_gen', value: gen })
+  }, [])
+
   const handlePlace = useCallback(() => {
     const current = getSim().placementTarget
     setSim({
@@ -216,6 +220,24 @@ export function Hud() {
             </button>
           </div>
         </div>
+
+        {sim.pursuerGens.length > 1 && (
+          <div className="control-group">
+            <span className="stat-label">GEN</span>
+            <div className="segmented">
+              {sim.pursuerGens.map((gen) => (
+                <button
+                  key={gen}
+                  className={sim.pursuerGen === gen ? 'seg-active' : ''}
+                  onClick={() => handleGen(gen)}
+                  disabled={sim.policyMode !== 'ppo'}
+                >
+                  {gen.toUpperCase()}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
 
         <div className="control-group">
           <span className="stat-label">EVADER</span>
