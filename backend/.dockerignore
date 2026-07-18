@@ -1,0 +1,7 @@
+.venv/
+logs/
+checkpoints/*/
+__pycache__/
+*.pyc
+README.md
+DEPLOY.md
