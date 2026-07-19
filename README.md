@@ -1,5 +1,9 @@
 # Pursuit // Evasion — RL Simulation with Live 3D Visualization
 
+**Live demo: [pursuit-evasion.vercel.app](https://pursuit-evasion.vercel.app)**
+*(free-tier backend sleeps when idle — the first visit may show CONNECTING for
+~a minute while it wakes, then reconnects automatically)*
+
 A PPO agent learns pursuit-evasion dynamics in a bounded 3D arena, then runs
 **live** on a Python backend while every simulation step streams over
 WebSockets into a Three.js scene in your browser — an interactive sandbox for
