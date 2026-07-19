@@ -40,9 +40,9 @@ Free services sleep after ~15 min idle and wake on the next request
 
    | Name | Value |
    | --- | --- |
-   | ` `VITE_WS_URL` | `wss://<your-service>.onrender.com/ws` |
+   | `VITE_WS_URL` | `wss://<your-service>.onrender.com/ws` |
 
-4. Deploy. Done — the page connects straight to the Space.
+4. Deploy. Done — the page connects straight to the backend.
 
 ## Local Docker sanity check
 
