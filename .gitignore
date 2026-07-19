@@ -15,3 +15,4 @@ backend/checkpoints/*/
 .DS_Store
 Thumbs.db
 frontend/tsconfig.tsbuildinfo
+hf-space/

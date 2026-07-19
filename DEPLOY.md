@@ -8,46 +8,29 @@ NOT run on Vercel's serverless functions.
 > Note: the server runs a single shared simulation. Every visitor watches the
 > same arena, and control actions (reset, policy switches) affect everyone.
 
-## 1. Backend → Hugging Face Spaces (free)
+## 1. Backend → Render (free)
 
-1. Create a new Space at https://huggingface.co/new-space
-   - SDK: **Docker**, visibility: Public, hardware: CPU basic (free)
-2. Clone the empty Space and copy the backend into it:
+The repo ships a `render.yaml` blueprint, so this is mostly clicks:
 
-   ```powershell
-   git clone https://huggingface.co/spaces/<your-user>/pursuit-evasion-api
-   cd pursuit-evasion-api
-   Copy-Item -Recurse ..\Rl` evasion\backend\* .
-   ```
+1. Sign up / log in at https://render.com (GitHub sign-in)
+2. **New → Blueprint** → connect the `pursuit-evasion` GitHub repo
+3. Render reads `render.yaml`, shows the `pursuit-evasion-api` service on the
+   **free** plan → click **Apply/Deploy**
+4. First build takes ~5–10 min (torch download). The service URL looks like
+   `https://pursuit-evasion-api-XXXX.onrender.com`
+   - Health check: `https://…onrender.com/health`
+   - WebSocket: `wss://…onrender.com/ws`
 
-3. Create the Space's `README.md` with this front-matter (required by HF):
+Free services sleep after ~15 min idle and wake on the next request
+(cold start ≈ 1 min while torch loads).
 
-   ```yaml
-   ---
-   title: Pursuit Evasion API
-   emoji: 🛰️
-   colorFrom: indigo
-   colorTo: red
-   sdk: docker
-   app_port: 7860
-   ---
-   ```
+### Alternatives
 
-4. Commit and push. HF builds the Dockerfile and serves at
-   `https://<your-user>-pursuit-evasion-api.hf.space`
-   - Health check: `https://…hf.space/health`
-   - WebSocket: `wss://<your-user>-pursuit-evasion-api.hf.space/ws`
-
-Free Spaces sleep after ~48h of inactivity and wake on the next visit
-(cold start ≈ 30s while torch loads).
-
-### Alternative: Fly.io
-
-```powershell
-cd backend
-fly launch --no-deploy        # accept defaults; internal port 7860
-fly deploy
-```
+- **Fly.io** (pay-as-you-go, ~$2–3/mo): `cd backend && fly launch` (internal
+  port 7860), then `fly deploy`.
+- **Hugging Face Spaces**: Docker Spaces require a PRO subscription; the
+  Dockerfile works there unchanged (`app_port: 7860` front-matter) if you
+  have PRO.
 
 ## 2. Frontend → Vercel
 
@@ -57,7 +40,7 @@ fly deploy
 
    | Name | Value |
    | --- | --- |
-   | `VITE_WS_URL` | `wss://<your-user>-pursuit-evasion-api.hf.space/ws` |
+   | ` `VITE_WS_URL` | `wss://<your-service>.onrender.com/ws` |
 
 4. Deploy. Done — the page connects straight to the Space.
 
